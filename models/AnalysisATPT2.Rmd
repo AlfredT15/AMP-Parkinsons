@@ -1,0 +1,25 @@
+# Set working directory
+setwd("C:/Users/nmarx/Downloads/R STUDIO 441/FINAL PROJECT")
+
+# Load required libraries
+library(dplyr)
+library(caret)
+
+# Read in the data
+parkinsons_data <- read.csv("train_clinical_data.csv")
+
+# Select the independent and dependent variables
+independent_variables <- c("age", "sex", "test_time", "motor_UPDRS", "total_UPDRS")
+dependent_variable <- "Jitter(%)"
+
+# Split the data into training and testing sets
+set.seed(123)
+train_indices <- createDataPartition(parkinsons_data[, dependent_variable], p = 0.8, list = FALSE)
+train_data <- parkinsons_data[train_indices, ]
+test_data <- parkinsons_data[-train_indices, ]
+
+# Create the model
+model <- lm(paste(dependent_variable, paste(independent_variables, collapse = " + "), sep = " ~ "), data = train_data)
+
+# Print the model summary
+summary(model)

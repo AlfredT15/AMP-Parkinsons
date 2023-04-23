@@ -1,0 +1,66 @@
+# Load necessary libraries
+library(dplyr)
+library(tidyr)
+library(caret)
+library(glmnet)
+library(tidyverse)
+library(magrittr)
+
+# Set working directory
+setwd("C:/Users/nmarx/Downloads/R STUDIO 441/FINAL PROJECT")
+
+# Load the data
+train_peptides <- read.csv("train_peptides.csv")
+train_proteins <- read.csv("train_proteins.csv")
+train_clinical_data <- read.csv("train_clinical_data.csv")
+
+# Merge the data
+merged_data <- train_peptides %>%
+  left_join(train_proteins, by = c("visit_id", "visit_month", "patient_id", "UniProt")) %>%
+  left_join(train_clinical_data, by = c("visit_id", "visit_month", "patient_id"))
+
+# Prepare the data for modeling
+predictors <- merged_data %>%
+  select(-c(visit_id, visit_month, patient_id, UniProt, Peptide, upd23b_clinical_state_on_medication)) %>%
+  na.omit()
+response <- merged_data %>%
+  select(updrs_1, updrs_2, updrs_3, updrs_4) %>%
+  na.omit()
+
+# Create the multivariate regression model
+model <- glmnet(as.matrix(predictors), as.matrix(response), alpha = 1, standardize = FALSE) # add "standardize = FALSE"
+
+# Make predictions on the test data
+test_peptides <- read.csv("test_peptides.csv")
+test_proteins <- read.csv("test_proteins.csv")
+
+# Join the test data
+test_merged_data <- test_peptides %>%
+  left_join(test_proteins, by = c("visit_id", "visit_month", "patient_id", "UniProt"))
+
+# Load test_clinical_data only if it exists
+if (file.exists("test_clinical_data.csv")) {
+  test_clinical_data <- read.csv("test_clinical_data.csv")
+  test_merged_data <- test_merged_data %>%
+    left_join(test_clinical_data, by = c("visit_id", "visit_month", "patient_id"))
+}
+
+# Prepare the test data for prediction
+test_predictors <- test_merged_data %>%
+  select(-c(visit_id, visit_month, patient_id, UniProt, Peptide)) %>%
+  na.omit()
+
+# Make predictions using the model
+predictions <- predict(model, newx = as.matrix(test_predictors)) # add "newx"
+
+# Load test_response only if it exists
+if (file.exists("test_response.csv")) {
+  test_response <- read.csv("test_response.csv") %>%
+    select(-c(visit_id, visit_month, patient_id)) %>%
+    na.omit()
+  # Evaluate the model performance
+  rmse <- sqrt(mean((predictions - as.matrix(test_response))^2))
+  print(rmse)
+}
+
+
