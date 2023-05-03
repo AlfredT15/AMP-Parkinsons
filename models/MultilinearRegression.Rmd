@@ -1,0 +1,100 @@
+```{r}
+# install.packages("dplyr")
+library(dplyr)
+# library(glmnet)
+library(caret)
+library(ggplot2)
+library(Matrix)
+
+```
+
+
+```{r}
+month_36 <- read.csv("/home/alfred/Code/Kaggle/AMP-Parkinsons/data/grouped_by_month_prot/month_36.csv")
+head(month_36)
+
+```
+
+```{r}
+nrow(month_36)
+```
+
+
+```{r}
+month_36 <- subset(month_36, select = -c(visit_month, visit_id, upd23b_medication_Off, upd23b_medication_On))
+head(month_36)
+```
+
+```{r}
+targets <- c("updrs_1", "updrs_2", "updrs_3", "updrs_4")
+# Split data into training and test sets
+set.seed(123)
+ train_index <- sample(nrow(month_36), 0.7 * nrow(month_36))
+train <- month_36[trainIndex, ]
+test <- month_36[-trainIndex, ]
+
+# Fit a multilinear model
+mlr_model <- lm(cbind(updrs_1, updrs_2, updrs_3, updrs_4) ~ ., data = train)
+
+# summary(mlr_model)
+
+# Get predicted values for the test data
+test$pred <- predict(mlr_model, newdata = test)
+
+# Plot actual vs predicted values for all targets
+par(mfrow = c(2, 2))
+for (i in 1:length(targets)) {
+  plot(test[,targets[i]], test$pred[,i], 
+       xlab = paste0("Actual ", targets[i]), 
+       ylab = paste0("Predicted ", targets[i]))
+  abline(0, 1, col = "red")
+}
+
+# Plot the residuals for all targets
+par(mfrow = c(2, 2))
+for (i in 1:length(targets)) {
+  plot(test[,targets[i]], test[,targets[i]] - test$pred[,i], 
+       xlab = paste0("Actual ", targets[i]), 
+       ylab = paste0("Residuals ", targets[i]))
+  abline(h = 0, col = "red")
+}
+
+summary(mlr_model)
+```
+
+```{r}
+# Multi lienar model using good predictors from lasso regression
+targets <- c("updrs_1", "updrs_2", "updrs_3", "updrs_4")
+# Split data into training and test sets
+set.seed(123)
+ train_index <- sample(nrow(month_36), 0.7 * nrow(month_36))
+train <- month_36[trainIndex, ]
+test <- month_36[-trainIndex, ]
+
+# Fit a multilinear model
+mlr_model <- lm(cbind(updrs_1, updrs_2, updrs_3, updrs_4) ~ RVDTVDPPYPR + O14773 + DC.UniMod_4.SLPYATESK + GLETSLAEC.UniMod_4.TFTK + PTLVEVSR, data = train)
+
+# summary(mlr_model)
+
+# Get predicted values for the test data
+test$pred <- predict(mlr_model, newdata = test)
+
+# Plot actual vs predicted values for all targets
+par(mfrow = c(2, 2))
+for (i in 1:length(targets)) {
+  plot(test[,targets[i]], test$pred[,i], 
+       xlab = paste0("Actual ", targets[i]), 
+       ylab = paste0("Predicted ", targets[i]))
+  abline(0, 1, col = "red")
+}
+
+# Plot the residuals for all targets
+par(mfrow = c(2, 2))
+for (i in 1:length(targets)) {
+  plot(test[,targets[i]], test[,targets[i]] - test$pred[,i], 
+       xlab = paste0("Actual ", targets[i]), 
+       ylab = paste0("Residuals ", targets[i]))
+  abline(h = 0, col = "red")
+}
+```
+

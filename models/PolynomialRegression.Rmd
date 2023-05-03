@@ -1,0 +1,214 @@
+```{r}
+# install.packages("gam")
+library(dplyr)
+library(mgcv)
+library(caret)
+library(ggplot2)
+library(Matrix)
+library(gam)
+```
+
+
+```{r}
+month_36 <- read.csv("/home/alfred/Code/Kaggle/AMP-Parkinsons/data/grouped_by_month_prot/month_36.csv")
+head(month_36)
+
+```
+
+```{r}
+nrow(month_36)
+```
+
+
+```{r}
+month_36 <- subset(month_36, select = -c(visit_month, visit_id, upd23b_medication_Off, upd23b_medication_On))
+head(month_36)
+```
+
+```{r}
+#Using the most important variables for each predictor as identified by the lasso regression
+targets <- c("updrs_1", "updrs_2", "updrs_3", "updrs_4")
+# Split data into training and test sets
+set.seed(123)
+train_index <- sample(nrow(month_36), 0.7 * nrow(month_36))
+train <- month_36[train_index, ]
+test <- month_36[-train_index, ]
+for (target in targets)
+{
+
+# Fit a GAM model
+gam_model <- gam(as.formula(paste(target, "~ s(VLTPTQVK) + s(TPLTATLSK) + s(YVM.UniMod_35.LPVADQDQC.UniMod_4.IR)")), data = train)
+
+
+# summary(gam_model)
+
+# Get predicted values for the test data
+test$pred <- predict(gam_model, newdata = test[, predictors], type = "response")
+
+# Plot actual vs predicted values for all targets
+plot(test[,target], test$pred, 
+    xlab = paste0("Actual ", target), 
+     ylab = paste0("Predicted ", target))
+abline(0, 1, col = "red")
+
+
+#Plot the residuals for all targets
+plot(fitted(gam_model), resid(gam_model), 
+     xlab = paste0("Actual ", target), 
+     ylab = paste0("Residuals ", target))
+abline(h = 0, col = "red")
+
+}
+summary(gam_model)
+```
+
+```{r}
+#Using the most important variables as identified by the lasso regression
+targets <- c("updrs_1", "updrs_2", "updrs_3", "updrs_4")
+# Split data into training and test sets
+set.seed(123)
+train_index <- sample(nrow(month_36), 0.7 * nrow(month_36))
+train <- month_36[train_index, ]
+test <- month_36[-train_index, ]
+for (target in targets)
+{
+
+# Fit a GAM model
+gam_model <- gam(as.formula(paste(target, "~ s(RVDTVDPPYPR) + s(O14773) + s(DC.UniMod_4.SLPYATESK) + s(GLETSLAEC.UniMod_4.TFTK) + s(PTLVEVSR) + s(RVDTVDPPYPR)")), data = train)
+
+
+# summary(gam_model)
+
+# Get predicted values for the test data
+test$pred <- predict(gam_model, newdata = test[, predictors], type = "response")
+
+# Plot actual vs predicted values for all targets
+plot(test[,target], test$pred, 
+    xlab = paste0("Actual ", target), 
+     ylab = paste0("Predicted ", target))
+abline(0, 1, col = "red")
+
+
+#Plot the residuals for all targets
+plot(fitted(gam_model), resid(gam_model), 
+     xlab = paste0("Actual ", target), 
+     ylab = paste0("Residuals ", target))
+abline(h = 0, col = "red")
+
+}
+summary(gam_model)
+```
+
+```{r}
+#Using the most important variables as identified by the ridge regression
+targets <- c("updrs_1", "updrs_2", "updrs_3", "updrs_4")
+# Split data into training and test sets
+set.seed(123)
+train_index <- sample(nrow(month_36), 0.7 * nrow(month_36))
+train <- month_36[train_index, ]
+test <- month_36[-train_index, ]
+for (target in targets)
+{
+
+# Fit a GAM model
+gam_model <- gam(as.formula(paste(target, "~ s(TPLTATLSK) + s(P01876) + s(DVQLVESGGGLVKPGGSLR) + s(P01780) + s(P08493) + s(VLTPTQVK) + s(YVM.UniMod_35.LPVADQDQC.UniMod_4.IR)")), data = train)
+
+
+# summary(gam_model)
+
+# Get predicted values for the test data
+test$pred <- predict(gam_model, newdata = test[, predictors], type = "response")
+
+# Plot actual vs predicted values for all targets
+plot(test[,target], test$pred, 
+    xlab = paste0("Actual ", target), 
+     ylab = paste0("Predicted ", target))
+abline(0, 1, col = "red")
+
+
+#Plot the residuals for all targets
+plot(fitted(gam_model), resid(gam_model), 
+     xlab = paste0("Actual ", target), 
+     ylab = paste0("Residuals ", target))
+abline(h = 0, col = "red")
+
+}
+summary(gam_model)
+```
+
+
+```{r}
+# anova of the two best models for updrs_1
+targets <- c("updrs_1")
+# Split data into training and test sets
+set.seed(123)
+train_index <- sample(nrow(month_36), 0.7 * nrow(month_36))
+train <- month_36[train_index, ]
+test <- month_36[-train_index, ]
+for (target in targets)
+{
+
+# Fit a GAM model
+gam_model1 <- gam(as.formula(paste(target, "~ s(VLTPTQVK) + s(TPLTATLSK) + s(YVM.UniMod_35.LPVADQDQC.UniMod_4.IR)")), data = train)
+gam_model2 <- gam(as.formula(paste(target, "~ s(TPLTATLSK) + s(P01876) + s(DVQLVESGGGLVKPGGSLR) + s(P01780) + s(P08493) + s(VLTPTQVK) + s(YVM.UniMod_35.LPVADQDQC.UniMod_4.IR)")), data = train)
+}
+
+anova(gam_model1, gam_model2)
+```
+
+```{r}
+# anova of the two best models for updrs_2
+targets <- c("updrs_2")
+# Split data into training and test sets
+set.seed(123)
+train_index <- sample(nrow(month_36), 0.7 * nrow(month_36))
+train <- month_36[train_index, ]
+test <- month_36[-train_index, ]
+for (target in targets)
+{
+
+# Fit a GAM model
+gam_model1 <- gam(as.formula(paste(target, "~ s(VLTPTQVK) + s(TPLTATLSK) + s(YVM.UniMod_35.LPVADQDQC.UniMod_4.IR)")), data = train)
+gam_model2 <- gam(as.formula(paste(target, "~ s(TPLTATLSK) + s(P01876) + s(DVQLVESGGGLVKPGGSLR) + s(P01780) + s(P08493) + s(VLTPTQVK) + s(YVM.UniMod_35.LPVADQDQC.UniMod_4.IR)")), data = train)
+}
+
+anova(gam_model1, gam_model2)
+```
+
+```{r}
+# anova of the two best models for updrs_3
+targets <- c("updrs_3")
+# Split data into training and test sets
+set.seed(123)
+train_index <- sample(nrow(month_36), 0.7 * nrow(month_36))
+train <- month_36[train_index, ]
+test <- month_36[-train_index, ]
+for (target in targets)
+{
+
+# Fit a GAM model
+gam_model1 <- gam(as.formula(paste(target, "~ s(VLTPTQVK) + s(TPLTATLSK) + s(YVM.UniMod_35.LPVADQDQC.UniMod_4.IR)")), data = train)
+gam_model2 <- gam(as.formula(paste(target, "~ s(TPLTATLSK) + s(P01876) + s(DVQLVESGGGLVKPGGSLR) + s(P01780) + s(P08493) + s(VLTPTQVK) + s(YVM.UniMod_35.LPVADQDQC.UniMod_4.IR)")), data = train)
+}
+
+anova(gam_model1, gam_model2)
+```
+
+```{r}
+# anova of the two best models for updrs_4
+targets <- c("updrs_4")
+# Split data into training and test sets
+set.seed(123)
+train_index <- sample(nrow(month_36), 0.7 * nrow(month_36))
+train <- month_36[train_index, ]
+test <- month_36[-train_index, ]
+for (target in targets)
+{
+
+# Fit a GAM model
+gam_model1 <- gam(as.formula(paste(target, "~ s(VLTPTQVK) + s(TPLTATLSK) + s(YVM.UniMod_35.LPVADQDQC.UniMod_4.IR)")), data = train)
+gam_model2 <- gam(as.formula(paste(target, "~ s(TPLTATLSK) + s(P01876) + s(DVQLVESGGGLVKPGGSLR) + s(P01780) + s(P08493) + s(VLTPTQVK) + s(YVM.UniMod_35.LPVADQDQC.UniMod_4.IR)")), data = train)
+}
+
+anova(gam_model1, gam_model2)
+```

@@ -1,5 +1,5 @@
 ```{r}
-# install.packages("caret")
+# install.packages("glmnet")
 library(dplyr)
 library(glmnet)
 library(caret)
@@ -7,25 +7,21 @@ library(ggplot2)
 library(Matrix)
 ```
 
+
 ```{r}
-full_data <- read.csv("/home/alfred/Code/Kaggle/AMP-Parkinsons/data/engineered/train_protein_peptide_clinical.csv")
-head(full_data)
+month_36 <- read.csv("/home/alfred/Code/Kaggle/AMP-Parkinsons/data/grouped_by_month_prot/month_36.csv")
+head(month_36)
 
 ```
 
 ```{r}
-month_0 <- read.csv("/home/alfred/Code/Kaggle/AMP-Parkinsons/data/grouped_by_month/month_0.csv")
-head(month_0)
-
+nrow(month_36)
 ```
 
-```{r}
-nrow(month_0)
-```
 
 ```{r}
-month_0 <- select(month_0, -visit_month, -visit_id, -upd23b_medication_Off, -upd23b_medication_On)
-head(month_0)
+month_36 <- subset(month_36, select = -c(visit_month, visit_id, upd23b_medication_Off, upd23b_medication_On))
+head(month_36)
 ```
 
 
@@ -37,12 +33,12 @@ targets <- c("updrs_1", "updrs_2", "updrs_3", "updrs_4")
 for (target in targets) {
   # Split data into training and test sets
   set.seed(123)
-  train_index <- sample(nrow(month_0), 0.7 * nrow(month_0))
-  train_data <- month_0[train_index, ]
-  test_data <- month_0[-train_index, ]
+  train_index <- sample(nrow(month_36), 0.7 * nrow(month_36))
+  train_data <- month_36[train_index, ]
+  test_data <- month_36[-train_index, ]
   
   # Define the predictors and response variable
-  predictors <- names(month_0)[!names(month_0) %in% c(targets)]
+  predictors <- names(month_36)[!names(month_36) %in% c(targets)]
   response <- target
   
   # Perform Ridge regression
@@ -68,11 +64,6 @@ for (target in targets) {
   # Print the MAPE+1 error
   print(paste0("MAPE+1 error for ", target, " Ridge regression: ", mape_error))
   
-  #plot(ridge_fit, xvar = "lambda", main = paste0("Ridge coefficient path for ", target))
-  
-  #coef_mag <- abs(coef(ridge_fit)[-1])
-  #barplot(coef_mag, main = paste0("Ridge coefficient magnitude for ", target), xlab = "Predictor", ylab = "Magnitude")
-  
   plot(test_data[, response], ridge_predictions, main = paste0("Actual vs. predicted for ", target), xlab = "Actual values", ylab = "Predicted values")
   abline(0, 1, col = "red")
   
@@ -80,7 +71,7 @@ for (target in targets) {
   plot(ridge_predictions, residuals, main = paste0("Residual plot for ", target),xlab = "Predicted values", ylab = "Residuals")
   abline(0, 0, col = "red")
   
-  plot(ridge_model, main = paste0("MAPE+1 error for ", target))
+  plot(ridge_model, main = paste0("Mean Squared Error for ", target))
   
   # Extract the coefficients from the Ridge model
   ridge_coeffs <- coef(ridge_fit)[-1]
@@ -102,90 +93,38 @@ for (target in targets) {
     print(paste0(top_predictors[i], " : ", top_coef[i]))
   }
   cat('\n')
-}
-```
-
-
-```{r}
-month_36 <- read.csv("/home/alfred/Code/Kaggle/AMP-Parkinsons/data/grouped_by_month/month_36.csv")
-head(month_36)
-
-```
-
-
-```{r}
-month_36 <- select(month_36, -visit_month, -visit_id, -upd23b_medication_Off, -upd23b_medication_On)
-head(month_36)
-```
-
-
-```{r}
-# Define the target variables
-targets <- c("updrs_1", "updrs_2", "updrs_3", "updrs_4")
-
-# Loop through the target variables
-for (target in targets) {
-  # Split data into training and test sets
-  set.seed(123)
-  train_index <- sample(nrow(month_36), 0.7 * nrow(month_36))
-  train_data <- month_36[train_index, ]
-  test_data <- month_36[-train_index, ]
   
-  # Define the predictors and response variable
-  predictors <- names(month_0)[!names(month_0) %in% c(targets)]
-  response <- target
-  
-  # Perform Ridge regression
-  ridge_model <- cv.glmnet(as.matrix(train_data[, predictors]), train_data[, response],
-                            alpha = 0, nfolds = 5)
-  
-  # Find the optimal lambda value
-  optimal_lambda <- ridge_model$lambda.min
-  
-  # Grid for lambda value
-  # grid <- 10^seq(10, -2, length = 100)
-  
-  # Fit the model using the optimal lambda value
-  ridge_fit <- glmnet(as.matrix(train_data[, predictors]), train_data[, response], alpha = 0,
-                      lambda = optimal_lambda)
+  # Make predictions on training data
+  ridge_train_pred <- predict(ridge_fit, newx = as.matrix(train_data[, predictors]))
   
   # Make predictions on test data
-  ridge_predictions <- predict(ridge_fit, newx = as.matrix(test_data[, predictors]))
+  ridge_test_pred <- predict(ridge_fit, newx = as.matrix(test_data[, predictors]))
   
-  # Calculate the MAPE+1 error
-  mape_error <- mean(abs(test_data[, response] - ridge_predictions)/(abs(test_data[, response])+1))
+  # Calculate R-squared and RMSE for training data
+  ridge_train_rsq <- cor(train_data[, response], ridge_train_pred)^2
+  ridge_train_rmse <- sqrt(mean((train_data[, response] - ridge_train_pred)^2))
   
-  # Print the MAPE+1 error
-  print(paste0("MAPE+1 error for ", target, " Ridge regression: ", mape_error))
+  # Calculate R-squared and RMSE for test data
+  ridge_test_rsq <- cor(test_data[, response], ridge_test_pred)^2
+  ridge_test_rmse <- sqrt(mean((test_data[, response] - ridge_test_pred)^2))
   
-  plot(test_data[, response], ridge_predictions, main = paste0("Actual vs. predicted for ", target), xlab = "Actual values", ylab = "Predicted values")
-  abline(0, 1, col = "red")
+  # Calculate the AIC and BIC
+  tLL <- ridge_fit$nulldev - deviance(ridge_fit)
+  k <- ridge_fit$df
+  n <- ridge_fit$nobs
+  AIC <- -tLL+2*k+2*k*(k+1)/(n-k-1)
+
+  BIC<-log(n)*k - tLL
   
-  residuals <- test_data[, response] - ridge_predictions
-  plot(ridge_predictions, residuals, main = paste0("Residual plot for ", target),xlab = "Predicted values", ylab = "Residuals")
-  abline(0, 0, col = "red")
+  # Print the results
+  print(paste0("Results for ", target, " Ridge regression:"))
+  print(paste0("R-squared (training): ", round(ridge_train_rsq, 3)))
+  print(paste0("RMSE (training): ", round(ridge_train_rmse, 3)))
+  print(paste0("R-squared (test): ", round(ridge_test_rsq, 3)))
+  print(paste0("RMSE (test): ", round(ridge_test_rmse, 3)))
+  cat(paste0("AIC: ", round(AIC, 3), "\n"))
+  cat(paste0("BIC: ", round(BIC, 3), "\n\n"))
   
-  plot(ridge_model, main = paste0("MAPE+1 error for ", target))
-  
-  # Extract the coefficients from the Ridge model
-  ridge_coeffs <- coef(ridge_fit)[-1]
-  
-  # Plot the coefficients using a barplot
-  barplot(ridge_coeffs, main = paste0("Ridge coefficients for ", target), xlab = "Predictor", ylab = "Coefficient")
-  
-  # Get the coefficient magnitudes
-  coef_mag <- abs(coef(ridge_fit)[-1])
-  
-  # Sort the coefficient magnitudes in descending order and get the indices
-  sorted_indices <- order(-coef_mag)
-  
-  # Print the top 5 predictor variables
-  top_predictors <- predictors[sorted_indices][1:5]
-  top_coef <- coef(ridge_fit)[-1][sorted_indices][1:5]
-  print(paste0("Top 5 predictor variables for ", target, ":"))
-  for (i in 1:5) {
-    print(paste0(top_predictors[i], " : ", top_coef[i]))
-  }
   cat('\n')
 }
 ```
